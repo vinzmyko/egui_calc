@@ -19,13 +19,40 @@ fn main() -> Result<(), eframe::Error> {
 
 struct MyApp {
     input: String,
+    decimal_flag: bool,
+    reset_flag: bool,
+    stored_number: f64,
+    calculation_flag: char,
 }
 
 impl Default for MyApp {
     fn default() -> Self {
         Self {
             input: "0".to_string(),
+            stored_number: 0.0,
+            decimal_flag: false,
+            reset_flag: true,
+            calculation_flag: ' ',
         }
+    }
+}
+
+impl MyApp {
+    fn calculator_button(&mut self, ui: &mut egui::Ui, label: &str) -> bool {
+        let button = ui.button(label);
+        if button.clicked() && self.reset_flag {
+            if self.input == "0".to_string() && label == "0" {
+
+            } else {
+                self.input = "".to_string();
+                self.input.push_str(label);
+                self.reset_flag = false;
+                return true;
+            }
+        } else if button.clicked() {
+            self.input.push_str(label);
+        }
+        button.clicked()
     }
 }
 
@@ -41,21 +68,68 @@ impl eframe::App for MyApp {
             egui::Grid::new("calculator_grid")
                 .spacing([10.0, 10.0])
                 .show(ui, |ui| {
-                    if ui.button("7").clicked() { self.input.push('7'); }
-                    if ui.button("8").clicked() { self.input.push('8'); }
-                    if ui.button("9").clicked() { self.input.push('9'); }
+                    self.calculator_button(ui, "7");
+                    self.calculator_button(ui, "8");
+                    self.calculator_button(ui, "9");
+                    if ui.button("C").clicked() {
+                        self.input = String::from("0"); 
+                        self.decimal_flag = false;
+                        self.stored_number = 0.0;
+                        self.reset_flag = true;
+                    }
                     ui.end_row();
-                    if ui.button("4").clicked() { self.input.push('4'); }
-                    if ui.button("5").clicked() { self.input.push('5'); }
-                    if ui.button("6").clicked() { self.input.push('6'); }
+                    self.calculator_button(ui, "4");
+                    self.calculator_button(ui, "5");
+                    self.calculator_button(ui, "6");
+                    if ui.button("+").clicked() {
+                        self.calculation_flag = '+';
+                        match self.input.parse() {
+                            Ok(num) => {
+                                self.stored_number = num;
+                            },
+                            Err(e) => println!("Error parsing: {}", e),
+                        }
+
+                        self.input = 0.to_string();
+                        self.reset_flag = true;
+                        self.decimal_flag = false;
+                    }
                     ui.end_row();
-                    if ui.button("1").clicked() { self.input.push('1'); }
-                    if ui.button("2").clicked() { self.input.push('2'); }
-                    if ui.button("3").clicked() { self.input.push('3'); }
+                    self.calculator_button(ui, "1");
+                    self.calculator_button(ui, "2");
+                    self.calculator_button(ui, "3");
+                    if ui.button("-").clicked() {
+                        self.calculation_flag = '-';
+                        self.stored_number = self.input.parse::<f64>().unwrap();
+                        self.input = 0.to_string();
+                        self.reset_flag = true;
+                        self.decimal_flag = false;
+                    }
                     ui.end_row();
-                    if ui.button("0").clicked() { self.input.push('0'); }
+                    self.calculator_button(ui, "0");
                     if ui.button(" ").clicked() { }
-                    if ui.button(".").clicked() { self.input.push('.'); }
+                    if ui.button(".").clicked() {
+                        if self.decimal_flag {
+                            return;
+                        }
+                        self.input.push('.');
+                        self.decimal_flag = true;
+                        self.reset_flag = false;
+                    }
+                    if ui.button("=").clicked() {
+                        let input_num = self.input.parse::<f64>().unwrap();
+                        let mut result: f64 = 0.0;
+                        match self.calculation_flag {
+                            '+' => result += input_num + self.stored_number,
+                            '-' => result += self.stored_number - input_num,
+                            _ => result = input_num,
+                        }
+
+                        self.input = result.to_string();
+                        self.calculation_flag = ' ';
+                        self.reset_flag = true;
+                        self.decimal_flag = false;
+                    }
             });
         });
     }
